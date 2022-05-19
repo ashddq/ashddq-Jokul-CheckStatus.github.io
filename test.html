@@ -1,0 +1,672 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html" charset="UTF-8">
+    <title>OneCheckout Tester</title>
+    <script>
+        /**
+         *
+         *  Secure Hash Algorithm (SHA1)
+         *  http://www.webtoolkit.info/
+         *
+         **/
+
+        function SHA1 (msg) {
+
+            function rotate_left(n,s) {
+                var t4 = ( n<<s ) | (n>>>(32-s));
+                return t4;
+            };
+
+            function lsb_hex(val) {
+                var str="";
+                var i;
+                var vh;
+                var vl;
+
+                for( i=0; i<=6; i+=2 ) {
+                    vh = (val>>>(i*4+4))&0x0f;
+                    vl = (val>>>(i*4))&0x0f;
+                    str += vh.toString(16) + vl.toString(16);
+                }
+                return str;
+            };
+
+            function cvt_hex(val) {
+                var str="";
+                var i;
+                var v;
+
+                for( i=7; i>=0; i-- ) {
+                    v = (val>>>(i*4))&0x0f;
+                    str += v.toString(16);
+                }
+                return str;
+            };
+
+
+            function Utf8Encode(string) {
+                string = string.replace(/\r\n/g,"\n");
+                var utftext = "";
+
+                for (var n = 0; n < string.length; n++) {
+
+                    var c = string.charCodeAt(n);
+
+                    if (c < 128) {
+                        utftext += String.fromCharCode(c);
+                    }
+                    else if((c > 127) && (c < 2048)) {
+                        utftext += String.fromCharCode((c >> 6) | 192);
+                        utftext += String.fromCharCode((c & 63) | 128);
+                    }
+                    else {
+                        utftext += String.fromCharCode((c >> 12) | 224);
+                        utftext += String.fromCharCode(((c >> 6) & 63) | 128);
+                        utftext += String.fromCharCode((c & 63) | 128);
+                    }
+
+                }
+
+                return utftext;
+            };
+
+            var blockstart;
+            var i, j;
+            var W = new Array(80);
+            var H0 = 0x67452301;
+            var H1 = 0xEFCDAB89;
+            var H2 = 0x98BADCFE;
+            var H3 = 0x10325476;
+            var H4 = 0xC3D2E1F0;
+            var A, B, C, D, E;
+            var temp;
+
+            msg = Utf8Encode(msg);
+
+            var msg_len = msg.length;
+
+            var word_array = new Array();
+            for( i=0; i<msg_len-3; i+=4 ) {
+                j = msg.charCodeAt(i)<<24 | msg.charCodeAt(i+1)<<16 |
+                    msg.charCodeAt(i+2)<<8 | msg.charCodeAt(i+3);
+                word_array.push( j );
+            }
+
+            switch( msg_len % 4 ) {
+                case 0:
+                    i = 0x080000000;
+                    break;
+                case 1:
+                    i = msg.charCodeAt(msg_len-1)<<24 | 0x0800000;
+                    break;
+
+                case 2:
+                    i = msg.charCodeAt(msg_len-2)<<24 | msg.charCodeAt(msg_len-1)<<16 | 0x08000;
+                    break;
+
+                case 3:
+                    i = msg.charCodeAt(msg_len-3)<<24 | msg.charCodeAt(msg_len-2)<<16 | msg.charCodeAt(msg_len-1)<<8	| 0x80;
+                    break;
+            }
+
+            word_array.push( i );
+
+            while( (word_array.length % 16) != 14 ) word_array.push( 0 );
+
+            word_array.push( msg_len>>>29 );
+            word_array.push( (msg_len<<3)&0x0ffffffff );
+
+
+            for ( blockstart=0; blockstart<word_array.length; blockstart+=16 ) {
+
+                for( i=0; i<16; i++ ) W[i] = word_array[blockstart+i];
+                for( i=16; i<=79; i++ ) W[i] = rotate_left(W[i-3] ^ W[i-8] ^ W[i-14] ^ W[i-16], 1);
+
+                A = H0;
+                B = H1;
+                C = H2;
+                D = H3;
+                E = H4;
+
+                for( i= 0; i<=19; i++ ) {
+                    temp = (rotate_left(A,5) + ((B&C) | (~B&D)) + E + W[i] + 0x5A827999) & 0x0ffffffff;
+                    E = D;
+                    D = C;
+                    C = rotate_left(B,30);
+                    B = A;
+                    A = temp;
+                }
+
+                for( i=20; i<=39; i++ ) {
+                    temp = (rotate_left(A,5) + (B ^ C ^ D) + E + W[i] + 0x6ED9EBA1) & 0x0ffffffff;
+                    E = D;
+                    D = C;
+                    C = rotate_left(B,30);
+                    B = A;
+                    A = temp;
+                }
+
+                for( i=40; i<=59; i++ ) {
+                    temp = (rotate_left(A,5) + ((B&C) | (B&D) | (C&D)) + E + W[i] + 0x8F1BBCDC) & 0x0ffffffff;
+                    E = D;
+                    D = C;
+                    C = rotate_left(B,30);
+                    B = A;
+                    A = temp;
+                }
+
+                for( i=60; i<=79; i++ ) {
+                    temp = (rotate_left(A,5) + (B ^ C ^ D) + E + W[i] + 0xCA62C1D6) & 0x0ffffffff;
+                    E = D;
+                    D = C;
+                    C = rotate_left(B,30);
+                    B = A;
+                    A = temp;
+                }
+
+                H0 = (H0 + A) & 0x0ffffffff;
+                H1 = (H1 + B) & 0x0ffffffff;
+                H2 = (H2 + C) & 0x0ffffffff;
+                H3 = (H3 + D) & 0x0ffffffff;
+                H4 = (H4 + E) & 0x0ffffffff;
+
+            }
+
+            var temp = cvt_hex(H0) + cvt_hex(H1) + cvt_hex(H2) + cvt_hex(H3) + cvt_hex(H4);
+
+            return temp.toLowerCase();
+
+        }
+
+        function getWords() {
+			var msg = "";
+			msg = document.OneCheckoutTester.MALLID.value + document.OneCheckoutTester.CHAINMERCHANT.value + document.OneCheckoutTester.BILLNUMBER.value + document.OneCheckoutTester.CUSTOMERID.value + document.OneCheckoutTester.AMOUNT.value + document.OneCheckoutTester.SHAREDKEY.value ;
+				//msg = document.OneCheckoutTester.AMOUNT.value + document.OneCheckoutTester.MALLID.value + document.OneCheckoutTester.INVOICENUMBER.value + document.OneCheckoutTester.SHAREDKEY.value + document.OneCheckoutTester.TRANSIDMERCHANT.value;
+            
+            document.OneCheckoutTester.WORDS.value = SHA1(msg);
+        }
+
+        function getTimestamp() {
+            var time = new Date().getTime();
+            document.OneCheckoutTester.TRANSIDMERCHANT.value=time;
+            Date.prototype.yyyymmdd = function() {
+                var yyyy = this.getFullYear().toString();
+                var mm = (this.getMonth()+1).toString(); // getMonth() is zero-based
+                var dd = this.getDate().toString();
+                var hh = this.getHours().toString();
+                var min = this.getMinutes().toString();
+                var ss = this.getSeconds().toString();
+
+                return yyyy + (mm[1]?mm:"0"+mm[0]) + (dd[1]?dd:"0"+dd[0]) + (hh[1]?hh:"0"+hh[0]) + (min[1]?min:"0"+min[0]) + (ss[1]?ss:"0"+ss[0]);
+            };
+            d = new Date();
+            document.OneCheckoutTester.REQUESTDATETIME.value = d.yyyymmdd();
+
+            var session1 = Math.random().toString(36).substr(2);
+            var session2 = Math.random().toString(36).substr(2);
+            var session3 = Math.random().toString(36).substr(2);
+            document.OneCheckoutTester.SESSIONID.value = session1 + session2 + session3;
+        }
+
+        function getBooking() {
+            Date.prototype.yyyymmdd = function() {
+                var yy = this.getFullYear().toString();
+                var mm = (this.getMonth()+1).toString(); // getMonth() is zero-based
+                var dd = this.getDate().toString();
+                return yy[2] + yy[3] + (mm[1]?mm:"0"+mm[0]) + (dd[1]?dd:"0"+dd[0])
+            };
+            d = new Date();
+            var alpha = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
+            var random = "";
+            for(i = 0; i < 6; ++i) {
+                random += alpha[Math.floor(Math.random() * alpha.length)];
+            }
+            document.OneCheckoutTester.BOOKINGCODE.value = random + d.yyyymmdd();
+        }
+
+        function getFlightNo() {
+            var alpha = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
+            var random = alpha[Math.floor(Math.random() * alpha.length)] + alpha[Math.floor(Math.random() * alpha.length)];
+            document.OneCheckoutTester.FLIGHTNUMBER.value = random + Math.random(Math.floor(Math.random() * 9999));
+        }
+
+        function mipNO() {
+            document.getElementById('cardnumber').style.display="none";
+            document.OneCheckoutTester.CARDNUMBER.value="";
+            document.getElementById('expirydate').style.display="none";
+            document.OneCheckoutTester.EXPIRYDATE.value="";
+            document.getElementById('cvv2').style.display="none";
+            document.OneCheckoutTester.CVV2.value="";
+            document.getElementById('installment_acquirer').style.display="none";
+            document.OneCheckoutTester.INSTALLMENTACQUIRER.value="";
+            document.getElementById('tenor').style.display="none";
+            document.OneCheckoutTester.TENOR.value="";
+            document.getElementById('promoid').style.display="none";
+            document.OneCheckoutTester.PROMOID.value="";
+            document.getElementById('challenge_code_1').style.display="none";
+            document.OneCheckoutTester.CHALLENGE_CODE_1.value="";
+            document.getElementById('challenge_code_2').style.display="none";
+            document.OneCheckoutTester.CHALLENGE_CODE_2.value="";
+            document.getElementById('challenge_code_3').style.display="none";
+            document.OneCheckoutTester.CHALLENGE_CODE_3.value="";
+            document.getElementById('response_token').style.display="none";
+            document.OneCheckoutTester.RESPONSE_TOKEN.value="";
+            document.getElementById('securitycode').style.display="none";
+            document.OneCheckoutTester.SECURITYCODE.value = "";
+            document.getElementById('useridklikbca').style.display="none";
+            document.OneCheckoutTester.USERIDKLIKBCA.value="";
+            document.getElementById('dokupayid').style.display="none";
+            document.OneCheckoutTester.DOKUPAYID.value="";
+            document.getElementById('paymentcode').style.display="none";
+            document.OneCheckoutTester.PAYMENTCODE.value="";
+            document.getElementById('cc_name').style.display="none";
+            document.OneCheckoutTester.CC_NAME.value="";
+            document.getElementById('address').style.display="none";
+            document.OneCheckoutTester.ADDRESS.value="";
+            document.getElementById('city').style.display="none";
+            document.OneCheckoutTester.CITY.value="";
+            document.getElementById('state').style.display="none";
+            document.OneCheckoutTester.STATE.value="";
+            document.getElementById('country').style.display="none";
+            document.OneCheckoutTester.COUNTRY.value="";
+            document.getElementById('zipcode').style.display="none";
+            document.OneCheckoutTester.ZIPCODE.value="";
+            document.getElementById('homephone').style.display="none";
+            document.OneCheckoutTester.HOMEPHONE.value="";
+            document.getElementById('mobilephone').style.display="none";
+            document.OneCheckoutTester.MOBILEPHONE.value="";
+            document.getElementById('workphone').style.display="none";
+            document.OneCheckoutTester.WORKPHONE.value="";
+            document.getElementById('birthdate').style.display="none";
+            document.OneCheckoutTester.BIRTHDATE.value="";
+            document.getElementById('billnumber').style.display="none";
+            document.OneCheckoutTester.BILLNUMBER.value="";
+            document.getElementById('billdetail').style.display="none";
+            document.OneCheckoutTester.BILLDETAIL.value="";
+            document.getElementById('billtype').style.display="none";
+            document.OneCheckoutTester.BILLTYPE.value="";
+            document.getElementById('startdate').style.display="none";
+            document.OneCheckoutTester.STARTDATE.value="";
+            document.getElementById('enddate').style.display="none";
+            document.OneCheckoutTester.ENDDATE.value="";
+            document.getElementById('executetype').style.display="none";
+            document.OneCheckoutTester.EXECUTETYPE.value="";
+            document.getElementById('executedate').style.display="none";
+            document.OneCheckoutTester.EXECUTEDATE.value="";
+            document.getElementById('executemonth').style.display="none";
+            document.OneCheckoutTester.EXECUTEMONTH.value="";
+		}
+
+        function channel() {
+            if(document.OneCheckoutTester.PAYMENTCHANNEL.value == "") {
+                mipNO();
+                document.getElementById('cardnumber').style.display="";
+                document.OneCheckoutTester.CARDNUMBER.value = "4111111111111111";
+                document.getElementById('expirydate').style.display="";
+                document.OneCheckoutTester.EXPIRYDATE.value = "1608";
+                document.getElementById('cvv2').style.display="";
+                document.OneCheckoutTester.CVV2.value = "123";
+                document.getElementById('installment_acquirer').style.display="";
+                document.OneCheckoutTester.INSTALLMENTACQUIRER.value = "";
+                document.getElementById('tenor').style.display="";
+                document.OneCheckoutTester.TENOR.value = "";
+                document.getElementById('promoid').style.display="";
+                document.OneCheckoutTester.PROMOID.value = "";
+                document.getElementById('cc_name').style.display="";
+                document.OneCheckoutTester.CC_NAME.value = "Anggar Keren";
+                document.getElementById('address').style.display="";
+                document.OneCheckoutTester.ADDRESS.value = "Alamat Billing Address";
+                document.getElementById('city').style.display="";
+                document.OneCheckoutTester.CITY.value = "Kota Billing Address";
+                document.getElementById('state').style.display="";
+                document.OneCheckoutTester.STATE.value = "Propinsi Billing Address";
+                document.getElementById('country').style.display="";
+                document.OneCheckoutTester.COUNTRY.value = "ID";
+                document.getElementById('zipcode').style.display="";
+                document.OneCheckoutTester.ZIPCODE.value = "12345";
+                document.getElementById('homephone').style.display="";
+                document.OneCheckoutTester.HOMEPHONE.value = "0123456789";
+                document.getElementById('mobilephone').style.display="";
+                document.OneCheckoutTester.MOBILEPHONE.value = "0987654321";
+                document.getElementById('workphone').style.display="";
+                document.OneCheckoutTester.WORKPHONE.value = "0123456789";
+                document.getElementById('birthdate').style.display="";
+                document.OneCheckoutTester.BIRTHDATE.value = "19861204";
+                document.getElementById('cardnumber').style.display="";
+                document.OneCheckoutTester.CARDNUMBER.value = "4111111111111111";
+                document.getElementById('challenge_code_1').style.display="";
+                document.OneCheckoutTester.CHALLENGE_CODE_1.value = document.OneCheckoutTester.CARDNUMBER.value.substr(6,10);
+                document.getElementById('challenge_code_2').style.display="";
+                document.OneCheckoutTester.CHALLENGE_CODE_2.value = "0000100000";
+                document.getElementById('challenge_code_3').style.display="";
+                document.OneCheckoutTester.CHALLENGE_CODE_3.value = Math.floor(Math.random() * 9999999999);
+                document.getElementById('response_token').style.display="";
+                document.OneCheckoutTester.RESPONSE_TOKEN.value = "000000";
+                document.getElementById('securitycode').style.display="";
+                document.OneCheckoutTester.SECURITYCODE.value = "";
+                document.getElementById('useridklikbca').style.display="";
+                document.OneCheckoutTester.USERIDKLIKBCA.value = "useridklikbca1234";
+                document.getElementById('dokupayid').style.display="";
+                document.OneCheckoutTester.DOKUPAYID.value = "1961264881";
+                document.getElementById('paymentcode').style.display="";
+                document.OneCheckoutTester.PAYMENTCODE.value = Math.floor(Math.random() * 9999999999);
+            } else if(document.OneCheckoutTester.PAYMENTCHANNEL.value == "01" || document.OneCheckoutTester.PAYMENTCHANNEL.value == "13") {
+                mipNO();
+                document.getElementById('cardnumber').style.display="";
+                document.OneCheckoutTester.CARDNUMBER.value = "4111111111111111";
+                document.getElementById('expirydate').style.display="";
+                document.OneCheckoutTester.EXPIRYDATE.value = "1608";
+                document.getElementById('cvv2').style.display="";
+                document.OneCheckoutTester.CVV2.value = "123";
+                document.getElementById('installment_acquirer').style.display="";
+                document.OneCheckoutTester.INSTALLMENTACQUIRER.value = "";
+                document.getElementById('tenor').style.display="";
+                document.OneCheckoutTester.TENOR.value = "";
+                document.getElementById('promoid').style.display="";
+                document.OneCheckoutTester.PROMOID.value = "";
+                document.getElementById('cc_name').style.display="";
+                document.OneCheckoutTester.CC_NAME.value = "Anggar Keren";
+                document.getElementById('address').style.display="";
+                document.OneCheckoutTester.ADDRESS.value = "Alamat Billing Address";
+                document.getElementById('city').style.display="";
+                document.OneCheckoutTester.CITY.value = "Kota Billing Address";
+                document.getElementById('state').style.display="";
+                document.OneCheckoutTester.STATE.value = "Propinsi Billing Address";
+                document.getElementById('country').style.display="";
+                document.OneCheckoutTester.COUNTRY.value = "ID";
+                document.getElementById('zipcode').style.display="";
+                document.OneCheckoutTester.ZIPCODE.value = "12345";
+                document.getElementById('homephone').style.display="";
+                document.OneCheckoutTester.HOMEPHONE.value = "0123456789";
+                document.getElementById('mobilephone').style.display="";
+                document.OneCheckoutTester.MOBILEPHONE.value = "0987654321";
+                document.getElementById('workphone').style.display="";
+                document.OneCheckoutTester.WORKPHONE.value = "0123456789";
+                document.getElementById('birthdate').style.display="";
+                document.OneCheckoutTester.BIRTHDATE.value = "19861204";
+            } else if(document.OneCheckoutTester.PAYMENTCHANNEL.value == "02") {
+                mipNO();
+                document.getElementById('cardnumber').style.display="";
+                document.OneCheckoutTester.CARDNUMBER.value = "4111111111111111";
+                document.getElementById('challenge_code_1').style.display="";
+                document.OneCheckoutTester.CHALLENGE_CODE_1.value = document.OneCheckoutTester.CARDNUMBER.value.substr(6,10);
+                document.getElementById('challenge_code_2').style.display="";
+                document.OneCheckoutTester.CHALLENGE_CODE_2.value = "0000100000";
+                document.getElementById('challenge_code_3').style.display="";
+                document.OneCheckoutTester.CHALLENGE_CODE_3.value = Math.floor(Math.random() * 9999999999);
+                document.getElementById('response_token').style.display="";
+                document.OneCheckoutTester.RESPONSE_TOKEN.value = "000000";
+            } else if(document.OneCheckoutTester.PAYMENTCHANNEL.value == "03") {
+                mipNO();
+                document.getElementById('securitycode').style.display="";
+                document.OneCheckoutTester.SECURITYCODE.value = "";
+                document.getElementById('useridklikbca').style.display="";
+                document.OneCheckoutTester.USERIDKLIKBCA.value = "useridklikbca1234";
+            } else if(document.OneCheckoutTester.PAYMENTCHANNEL.value == "04") {
+                mipNO();
+                document.getElementById('dokupayid').style.display="";
+                document.OneCheckoutTester.DOKUPAYID.value = "1961264881";
+            } else if(document.OneCheckoutTester.PAYMENTCHANNEL.value == "05") {
+                mipNO();
+                document.getElementById('paymentcode').style.display="";
+                document.OneCheckoutTester.PAYMENTCODE.value = Math.floor(Math.random() * 9999999999);
+            } else if(document.OneCheckoutTester.PAYMENTCHANNEL.value == "06") {
+                mipNO();
+            } else if(document.OneCheckoutTester.PAYMENTCHANNEL.value == "07") {
+                mipNO();
+                document.getElementById('paymentcode').style.display="";
+                document.OneCheckoutTester.PAYMENTCODE.value = Math.floor(Math.random() * 9999999999);
+            } else if(document.OneCheckoutTester.PAYMENTCHANNEL.value == "08") {
+                mipNO();
+                document.getElementById('paymentcode').style.display="";
+                document.OneCheckoutTester.PAYMENTCODE.value = Math.floor(Math.random() * 9999999999);
+            } else if(document.OneCheckoutTester.PAYMENTCHANNEL.value == "09") {
+                mipNO();
+                document.getElementById('paymentcode').style.display="";
+                document.OneCheckoutTester.PAYMENTCODE.value = Math.floor(Math.random() * 9999999999);
+            } else if(document.OneCheckoutTester.PAYMENTCHANNEL.value == "10") {
+                mipNO();
+                document.getElementById('paymentcode').style.display="";
+                document.OneCheckoutTester.PAYMENTCODE.value = Math.floor(Math.random() * 9999999999);
+            } else if(document.OneCheckoutTester.PAYMENTCHANNEL.value == "11") {
+                mipNO();
+                document.getElementById('paymentcode').style.display="";
+                document.OneCheckoutTester.PAYMENTCODE.value = Math.floor(Math.random() * 9999999999);
+            } else if (document.OneCheckoutTester.PAYMENTCHANNEL.value == "17"){
+				mipNO();
+	            document.getElementById('billnumber').style.display="";
+	            document.OneCheckoutTester.BILLNUMBER.value="1237974";
+	            document.getElementById('billdetail').style.display="";
+	            document.OneCheckoutTester.BILLDETAIL.value="test";
+	            document.getElementById('billtype').style.display="";
+	            document.OneCheckoutTester.BILLTYPE.value="S";
+	            document.getElementById('startdate').style.display="";
+	            document.OneCheckoutTester.STARTDATE.value="20140319";
+	            document.getElementById('enddate').style.display="";
+	            document.OneCheckoutTester.ENDDATE.value="20150319";
+	            document.getElementById('executetype').style.display="";
+	            document.OneCheckoutTester.EXECUTETYPE.value="DAY";
+	            document.getElementById('executedate').style.display="";
+	            document.OneCheckoutTester.EXECUTEDATE.value="WED";
+	            document.getElementById('executemonth').style.display="";
+	            document.OneCheckoutTester.EXECUTEMONTH.value="MAR";	
+			} else if (document.OneCheckoutTester.PAYMENTCHANNEL.value == "18"){
+				mipNO();
+	            document.OneCheckoutTester.PURCHASEAMOUNT.value="339000.00";
+	            document.getElementById('customerid').style.display="none";
+	            document.OneCheckoutTester.CUSTOMERID.value="";
+	            document.getElementById('shipping_address').style.display="none";
+	            document.OneCheckoutTester.SHIPPING_ADDRESS.value="";
+	            document.getElementById('shipping_city').style.display="none";
+	            document.OneCheckoutTester.SHIPPING_CITY.value="";
+	            document.getElementById('shipping_state').style.display="none";
+	            document.OneCheckoutTester.SHIPPING_STATE.value="";
+	            document.getElementById('shipping_country').style.display="none";
+	            document.OneCheckoutTester.SHIPPING_COUNTRY.value="";
+	            document.getElementById('shipping_zipcode').style.display="none";
+	            document.OneCheckoutTester.SHIPPING_ZIPCODE.value="";
+	            document.getElementById('route').style.display="none";
+	            document.OneCheckoutTester.ROUTE.value="";
+	            document.getElementById('ffnumber').style.display="none";
+	            document.OneCheckoutTester.FFNUMBER.value="";
+	            document.getElementById('Additional_Info').style.display="none";
+	            document.OneCheckoutTester.ADDITIONALDATA.value="";
+	            document.getElementById('ffnumber').style.display="none";
+	            document.OneCheckoutTester.FFNUMBER.value="";
+
+	
+	            document.getElementById('acquirerid').style.display="";
+	            document.OneCheckoutTester.ACQUIRERID.value="1";
+	            document.getElementById('mallid').style.display="";
+	            document.OneCheckoutTester.MALLID.value="1";
+	            document.getElementById('chainmerchant').style.display="";
+	            document.OneCheckoutTester.CHAINMERCHANT.value="NA";
+	            document.getElementById('invoicenumber').style.display="";
+
+	            //var chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXTZabcdefghiklmnopqrstuvwxyz";
+				var chars = "012345678901234567890123456789012345678901234567890123456789"
+	            var string_length = 16;
+				var randomstring = '';
+	            for (var i=0; i<string_length; i++) {
+	                var rnum = Math.floor(Math.random() * chars.length);
+	                randomstring += chars.substring(rnum,rnum+1);
+	            }
+	
+	            document.OneCheckoutTester.INVOICENUMBER.value="INVMERCH"+randomstring;
+	            document.getElementById('amount').style.display="";
+	            document.OneCheckoutTester.AMOUNT.value="339000.00";
+	            document.getElementById('basket').style.display="";
+	            document.OneCheckoutTester.BASKET.value="Movie FEMALE AGENTS,69000.00,3,207000.00;Movie LEGEND OF THE FIST THE RETURN OF CHEN ZHEN,59000.00,2,118000.00;Jasa Kurir,14000.00,1,14000.00";
+	            document.getElementById('description').style.display="";
+	            document.OneCheckoutTester.DESCRIPTION.value="Payment Description";
+
+			}
+        }
+
+        
+
+    </script>
+
+</head>
+<body onload="getTimestamp();channel();">
+<form name="OneCheckoutTester" method=post action="https://staging.doku.com/Suite/Receive">
+<table width="100%">
+<tr>
+    <td align="center" colspan="2">OneCheckout Tester: </td>
+</tr>
+<tr>
+    <td align="right">PAYMENTCHANNEL</td>
+    <td>
+        <select name="PAYMENTCHANNEL" onchange="channel();">
+            <option value="17" selected>Recur</option>
+        </select>
+    </td>
+</tr>
+<tr id="mallid">
+    <td align="right">MALLID</td>
+    <td><input type="text" name="MALLID" value="9799"/></td>
+</tr>
+<tr id="chainmerchant">
+    <td align="right">CHAINMERCHANT</td>
+    <td><input type="text" name="CHAINMERCHANT" value="NA"/></td>
+</tr>
+<tr id="transidmerchant">
+    <td align="right">TRANSIDMERCHANT</td>
+    <td><input type="text" name="TRANSIDMERCHANT"/></td>
+</tr>
+<tr id="currency">
+    <td align="right">CURRENCY</td>
+    <td><input type="text" name="CURRENCY" value="360"/></td>
+</tr>
+<tr id="purchasecurrency">
+    <td align="right">PURCHASECURRENCY</td>
+    <td><input type="text" name="PURCHASECURRENCY" value="360"/></td>
+</tr>
+<tr id="amount">
+    <td align="right">AMOUNT</td>
+    <td><input type="text" name="AMOUNT" value="100000.00"/></td>
+</tr>
+<tr id="REGISTERAMOUNT">
+    <td align="right">REGISTERAMOUNT</td>
+    <td><input type="text" name="REGISTERAMOUNT" value="100000.00"/></td>
+</tr>
+<tr id="purchaseamount">
+    <td align="right">PURCHASEAMOUNT</td>
+    <td><input type="text" name="PURCHASEAMOUNT" value="100000.00"/></td>
+</tr>
+<tr id="sessionid">
+    <td align="right">SESSIONID</td>
+    <td><input type="text" name="SESSIONID"/></td>
+</tr>
+<tr id="requestdatetime">
+    <td align="right">REQUESTDATETIME</td>
+    <td><input type="text" name="REQUESTDATETIME"/></td>
+</tr>
+<tr>
+    <td align="right">SHAREDKEY</td>
+    <td><input type="text" name="SHAREDKEY" value="8W2wLInrwk0N"/></td>
+</tr>
+<tr id="words">
+    <td align="right">WORDS</td>
+    <td>
+        <input type="text" id="WORDS" name="WORDS" value=""/>
+    <input type="button" value="Generate WORDS" onClick="getWords();">&nbsp;</td>
+    </td>
+</tr>
+
+<tr id="customerid">
+    <td align="right">CUSTOMERID</td>
+    <td><input type="text" name="CUSTOMERID" value="AL001"/></td>
+</tr>
+<tr id="name">
+    <td align="right">NAME</td>
+    <td><input type="text" name="NAME" value="Doku recur"/></td>
+</tr>
+<tr id="email">
+    <td align="right">EMAIL</td>
+    <td><input type="text" name="EMAIL" value="doku@doku.com"/></td>
+</tr>
+<tr id="address">
+    <td align="right">ADDRESS</td>
+    <td><input type="text" name="ADDRESS" value="Jakarta"/></td>
+</tr>
+<tr id="city">
+    <td align="right">CITY</td>
+    <td><input type="text" name="CITY" value="Jakarta"/></td>
+</tr>
+<tr id="state">
+    <td align="right">STATE</td>
+    <td><input type="text" name="STATE" value="Jakarta"/></td>
+</tr>
+<tr id="country">
+    <td align="right">COUNTRY</td>
+    <td><input type="text" name="COUNTRY" value="ID"/></td>
+</tr>
+<tr id="zipcode">
+    <td align="right">ZIPCODE</td>
+    <td><input type="text" name="ZIPCODE" value="88552"/></td>
+</tr>
+<tr id="homephone">
+    <td align="right">HOMEPHONE</td>
+    <td><input type="text" name="HOMEPHONE" value="62215150555"/></td>
+</tr>
+<tr id="mobilephone">
+    <td align="right">MOBILEPHONE</td>
+    <td><input type="text" name="MOBILEPHONE" value="628184745132"/></td>
+</tr>
+<tr id="workphone">
+    <td align="right">WORKPHONE</td>
+    <td><input type="text" name="WORKPHONE" value="62215150555"/></td>
+</tr>
+
+<tr id="BILLNUMBER">
+    <td align="right">BILLNUMBER</td>
+    <td><input type="text" name="BILLNUMBER" value="AL001"></td>
+</tr>
+<tr id="billdetail">
+    <td align="right">BILLDETAIL</td>
+    <td><input type="text" name="BILLDETAIL" value="testing"/></td>
+</tr>
+<tr id="billtype">
+    <td align="right">BILLTYPE</td>
+    <td><input type="text" name="BILLTYPE" value="P"/></td>
+</tr>
+<tr id="startdate">
+    <td align="right">STARTDATE</td>
+    <td><input type="text" name="STARTDATE" value="20171121"/></td>
+</tr>
+<tr id="enddate">
+    <td align="right">ENDDATE</td>
+    <td><input type="text" name="ENDDATE" value="20991121"/></td>
+</tr>
+<tr id="executetype">
+    <td align="right">EXECUTETYPE</td>
+    <td><input type="text" name="EXECUTETYPE" value="DATE"/></td>
+</tr>
+<tr id="executedate">
+    <td align="right">EXECUTEDATE</td>
+    <td><input type="text" name="EXECUTEDATE" value="1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28"/></td>
+</tr>
+<tr id="executemonth">
+    <td align="right">EXECUTEMONTH</td>
+    <td><input type="text" name="EXECUTEMONTH" value="Apr,May"/></td>
+</tr>
+<tr id="FLATSTATUS">
+    <td align="right">FLATSTATUS</td>
+    <td><input type="text" name="FLATSTATUS" value="true"/></td>
+</tr>
+
+<tr>
+    <td align="right"></td>
+    <td>
+        <input type="submit" value="submit">
+    </td>
+</tr>
+</table>
+</form>
+</body>
+</html>
+
